@@ -42,27 +42,34 @@ func (fe *FileExplorer) Run() error {
 		if err != nil {
 			return err
 		}
+
 		fe.print("%s\n", cur)
 
 		fe.print("Exits:\n")
-		if err = filepath.Walk(cur, func(path string, info os.FileInfo, err error) error {
-			if err != nil {
-				return err
-			}
+		_ = filepath.Walk(cur, func(path string, info os.FileInfo, err error) error {
 			if path == cur {
 				return nil // don't print current dir
 			}
+
 			// don't print contents of child directories
 			if filepath.Join(cur, info.Name()) != path {
 				return filepath.SkipDir
 			}
+
 			if info.IsDir() {
+				if os.IsPermission(err) {
+					fe.print("\t%s (locked)\n", info.Name())
+					return filepath.SkipDir
+				}
+
+				if err != nil {
+					return filepath.SkipDir
+				}
+
 				fe.print("\t%s\n", info.Name())
 			}
 			return nil
-		}); err != nil {
-			return err
-		}
+		})
 
 		if err := fe.promptCommand(); err != nil {
 			return err
@@ -110,14 +117,29 @@ func (fe *FileExplorer) processCommand(input string) error {
 	case "quit", "q":
 		fe.print("Goodbye!\n")
 		os.Exit(0)
+	case "go", "g":
+		if len(tokens) == 1 {
+			return tryAgainError("Where do you want to go?")
+		}
+		dest := strings.Join(tokens[1:], " ")
+		if err := os.Chdir(filepath.Join(".", dest)); err != nil {
+			if os.IsNotExist(err) {
+				return tryAgainError("There is no door to %q here", dest)
+			}
+			if os.IsPermission(err) {
+				return tryAgainError("The door is tightly bolted")
+			}
+			return tryAgainError("You can't go to %q from here", dest)
+		}
 	default:
-		return invalidCommandError(command)
+		return tryAgainError("%q is not a valid command", command)
 	}
 	return nil
 }
 
-func invalidCommandError(cmd string) error {
-	return fmt.Errorf("invalid command %q, try again", cmd)
+func tryAgainError(format string, args ...interface{}) error {
+	msg := fmt.Sprintf(format, args...)
+	return fmt.Errorf("%s (try again)", msg)
 }
 
 func (fe *FileExplorer) prompt(req string) (string, error) {

@@ -14,6 +14,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 )
 
@@ -21,6 +22,7 @@ func main() {
 	fe := NewFileExplorer(os.Stdin, os.Stdout)
 
 	if err := fe.Run(); err != nil {
+		fmt.Fprint(os.Stderr, err.Error())
 		os.Exit(1)
 	}
 }
