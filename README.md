@@ -10,3 +10,11 @@ a place, and the filesystem is like a map of that place.
 
 This is a work in progress, and just for fun. Enjoy!
 
+---
+
+## Building
+
+1. Install the [Go Programming Language](https://golang.org).
+2. From your clone of this repo: `go build`
+
+The result is a single executable file, `filesystem-explorer`.
