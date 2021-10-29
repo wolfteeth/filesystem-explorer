@@ -14,40 +14,13 @@
 package main
 
 import (
-	"bufio"
-	"fmt"
 	"os"
-	"path/filepath"
-	"strings"
 )
 
 func main() {
-	out := os.Stdout
-	in := bufio.NewScanner(os.Stdin)
+	fe := NewFileExplorer(os.Stdin, os.Stdout)
 
-	fmt.Fprintf(out, "Welcome to Filesystem Explorer!\n\n")
-
-	for {
-		cur, err := filepath.Abs(".")
-		if err != nil {
-			panic(err)
-		}
-		fmt.Fprintf(out, "%s\n", cur)
-
-		fmt.Fprintf(out, "Exits:\n")
-		_ = filepath.Walk(cur, func(path string, info os.FileInfo, err error) error {
-			if info.IsDir() {
-				fmt.Fprintf(out, "\t%s\n", filepath.Base(path))
-			}
-			return nil
-		})
-
-		fmt.Fprintf(out, "Enter command: ")
-		var input strings.Builder
-		for in.Scan() {
-			input.WriteString(in.Text())
-		}
-
-		fmt.Fprintf(out, "got %q\n", input.String())
+	if err := fe.Run(); err != nil {
+		os.Exit(1)
 	}
 }
