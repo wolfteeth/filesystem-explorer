@@ -41,9 +41,13 @@ type FileExplorer struct {
 func (fe *FileExplorer) Run() error {
 	fe.print("Welcome to Filesystem Explorer!\n\n")
 
+	var prev Room
 	for {
 		room := currentLocation()
-		DisplayRoom(room, fe.out)
+		if prev == nil || room.Name() != prev.Name() {
+			prev = room
+			DisplayRoom(room, fe.out)
+		}
 
 		if err := fe.promptCommand(); err != nil {
 			return err
@@ -103,11 +107,15 @@ func (fe *FileExplorer) prompt(req string) (string, error) {
 	return strings.TrimSpace(resp), nil
 }
 
+// processCommand parses the requested command and either executes it or returns
+// an error.
 func (fe *FileExplorer) processCommand(input string) error {
 	tokens := strings.Split(input, " ")
 
 	command := tokens[0]
 	switch command {
+	case "help", "h":
+		fe.printHelp()
 	case "quit", "q":
 		fe.print("Goodbye!\n")
 		os.Exit(0)
@@ -129,6 +137,14 @@ func (fe *FileExplorer) processCommand(input string) error {
 		return tryAgainError("%q is not a valid command", command)
 	}
 	return nil
+}
+
+func (fe *FileExplorer) printHelp() {
+	fe.print("Commands:\n")
+	fe.print("  [h]elp\t\tDisplay this help screen\n")
+	fe.print("  [q]uit\t\tQuit the program\n")
+	fe.print("  [g]o [exit-name]\tGo through an exit from a room\n")
+	fe.print("\n")
 }
 
 func tryAgainError(format string, args ...interface{}) error {

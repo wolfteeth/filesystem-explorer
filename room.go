@@ -24,6 +24,7 @@ import (
 // Room is an interface for all rooms.
 type Room interface {
 	Name() string
+	DisplayName() string
 	Description() string
 	Exits() []string
 	Items() []string
@@ -59,8 +60,13 @@ type DirRoom struct {
 	path string
 }
 
-// Name returns the basename of the directory.
+// Name returns the path of the directory.
 func (r *DirRoom) Name() string {
+	return r.path
+}
+
+// DisplayName returns a short title to be used for display.
+func (r *DirRoom) DisplayName() string {
 	return filepath.Base(r.path)
 }
 
