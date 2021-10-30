@@ -21,20 +21,32 @@ import (
 	"strings"
 )
 
-func currentLocation() *Room {
-	path, err := filepath.Abs(".")
-	if err != nil {
-		panic(err)
-	}
-
-	return &Room{
-		path: path,
-	}
+// Room is an interface for all rooms.
+type Room interface {
+	Name() string
+	Description() string
+	Exits() []string
+	Items() []string
 }
 
-// Room is a dungeon room that represents a filesystem directory.
-type Room struct {
-	path string
+// DisplayRoom writes a depiction of the Room to the io.Writer.
+func DisplayRoom(r Room, out io.Writer) {
+	printHeader(r.Name(), out)
+
+	fmt.Fprintf(out, r.Description())
+
+	items := r.Items()
+	if len(items) > 0 {
+		fmt.Fprint(out, "Items:\n")
+		for _, item := range items {
+			fmt.Fprintf(out, "\t%s\n", item)
+		}
+	}
+
+	fmt.Fprint(out, "Exits:\n")
+	for _, exit := range r.Exits() {
+		fmt.Fprintf(out, "\t%s\n", exit)
+	}
 }
 
 func printHeader(str string, out io.Writer) {
@@ -42,8 +54,18 @@ func printHeader(str string, out io.Writer) {
 	fmt.Fprintf(out, "%s\n\n", strings.Repeat("=", len(str)))
 }
 
+// DirRoom is a dungeon room that represents a filesystem directory.
+type DirRoom struct {
+	path string
+}
+
+// Name returns the basename of the directory.
+func (r *DirRoom) Name() string {
+	return filepath.Base(r.path)
+}
+
 // Description returns a description of the Room.
-func (r *Room) Description() string {
+func (r *DirRoom) Description() string {
 	desc := "You stand in a dusty dungeon chamber, not much different from the rest. The\n" +
 		"room is full of cobwebs and everything is coated in an undisturbed layer of\n" +
 		"dust.\n"
@@ -53,23 +75,17 @@ func (r *Room) Description() string {
 	return fmt.Sprintf("%s\n%s\n\t%s\n\n", desc, pathDesc, r.path)
 }
 
-// Display writes the information about the Room to the io.Writer.
-func (r *Room) Display(out io.Writer) {
-	shortName := filepath.Base(r.path)
-
-	printHeader(shortName, out)
-
-	fmt.Fprintf(out, r.Description())
-
-	files := []string{}
-	dirs := []string{}
+// Exits returns a list of the child directories as exits.
+func (r *DirRoom) Exits() []string {
+	var dirs []string
 
 	_ = filepath.Walk(r.path, func(path string, info os.FileInfo, err error) error {
+		// Do nothing with current dir
 		if path == r.path {
-			return nil // don't print current dir
+			return nil
 		}
 
-		// don't print contents of child directories
+		// don't recurse into child directories
 		if filepath.Join(r.path, info.Name()) != path {
 			return filepath.SkipDir
 		}
@@ -85,21 +101,35 @@ func (r *Room) Display(out io.Writer) {
 			}
 
 			dirs = append(dirs, info.Name())
+		}
+		return nil
+	})
+
+	return dirs
+}
+
+// Items returns the files in the directory as objects.
+func (r *DirRoom) Items() []string {
+	var files []string
+
+	_ = filepath.Walk(r.path, func(path string, info os.FileInfo, err error) error {
+		// Do nothing with current dir
+		if path == r.path {
+			return nil
+		}
+
+		// don't recurse into child directories
+		if filepath.Join(r.path, info.Name()) != path {
+			return filepath.SkipDir
+		}
+
+		if info.IsDir() {
+			return filepath.SkipDir
 		} else {
 			files = append(files, info.Name())
 		}
 		return nil
 	})
 
-	if len(files) > 0 {
-		fmt.Fprint(out, "Items:\n")
-		for _, file := range files {
-			fmt.Fprintf(out, "\t%s\n", file)
-		}
-	}
-
-	fmt.Fprint(out, "Exits:\n")
-	for _, dir := range dirs {
-		fmt.Fprintf(out, "\t%s\n", dir)
-	}
+	return files
 }

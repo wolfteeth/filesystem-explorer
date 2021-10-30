@@ -43,11 +43,22 @@ func (fe *FileExplorer) Run() error {
 
 	for {
 		room := currentLocation()
-		room.Display(fe.out)
+		DisplayRoom(room, fe.out)
 
 		if err := fe.promptCommand(); err != nil {
 			return err
 		}
+	}
+}
+
+func currentLocation() *DirRoom {
+	path, err := filepath.Abs(".")
+	if err != nil {
+		panic(err)
+	}
+
+	return &DirRoom{
+		path: path,
 	}
 }
 
@@ -83,6 +94,15 @@ func (fe *FileExplorer) promptCommand() error {
 	return nil
 }
 
+func (fe *FileExplorer) prompt(req string) (string, error) {
+	fe.print("%s> ", req)
+	resp, err := fe.in.ReadString('\n')
+	if err != nil {
+		return "", err
+	}
+	return strings.TrimSpace(resp), nil
+}
+
 func (fe *FileExplorer) processCommand(input string) error {
 	tokens := strings.Split(input, " ")
 
@@ -114,13 +134,4 @@ func (fe *FileExplorer) processCommand(input string) error {
 func tryAgainError(format string, args ...interface{}) error {
 	msg := fmt.Sprintf(format, args...)
 	return fmt.Errorf("%s (try again)", msg)
-}
-
-func (fe *FileExplorer) prompt(req string) (string, error) {
-	fe.print("%s> ", req)
-	resp, err := fe.in.ReadString('\n')
-	if err != nil {
-		return "", err
-	}
-	return strings.TrimSpace(resp), nil
 }
