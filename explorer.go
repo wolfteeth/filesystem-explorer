@@ -45,7 +45,9 @@ func (fe *FileExplorer) Run() error {
 
 		fe.print("%s\n", cur)
 
-		fe.print("Exits:\n")
+		files := []string{}
+		dirs := []string{}
+
 		_ = filepath.Walk(cur, func(path string, info os.FileInfo, err error) error {
 			if path == cur {
 				return nil // don't print current dir
@@ -58,7 +60,7 @@ func (fe *FileExplorer) Run() error {
 
 			if info.IsDir() {
 				if os.IsPermission(err) {
-					fe.print("\t%s (locked)\n", info.Name())
+					dirs = append(dirs, fmt.Sprintf("%s (locked)", info.Name()))
 					return filepath.SkipDir
 				}
 
@@ -66,10 +68,22 @@ func (fe *FileExplorer) Run() error {
 					return filepath.SkipDir
 				}
 
-				fe.print("\t%s\n", info.Name())
+				dirs = append(dirs, info.Name())
+			} else {
+				files = append(files, info.Name())
 			}
 			return nil
 		})
+
+		fe.print("Items:\n")
+		for _, file := range files {
+			fe.print("\t%s\n", file)
+		}
+
+		fe.print("Exits:\n")
+		for _, dir := range dirs {
+			fe.print("\t%s\n", dir)
+		}
 
 		if err := fe.promptCommand(); err != nil {
 			return err
