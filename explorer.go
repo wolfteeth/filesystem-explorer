@@ -22,6 +22,8 @@ import (
 	"strings"
 )
 
+// NewFileExplorer creates a new FileExplorer session with a given input and
+// output stream.
 func NewFileExplorer(in io.Reader, out io.Writer) *FileExplorer {
 	return &FileExplorer{
 		in:  bufio.NewReader(in),
@@ -29,61 +31,19 @@ func NewFileExplorer(in io.Reader, out io.Writer) *FileExplorer {
 	}
 }
 
+// FileExplorer controls an interactive filesystem exploration session.
 type FileExplorer struct {
 	in  *bufio.Reader
 	out io.Writer
 }
 
+// Run runs the interactive session loop.
 func (fe *FileExplorer) Run() error {
 	fe.print("Welcome to Filesystem Explorer!\n\n")
 
 	for {
-		cur, err := filepath.Abs(".")
-		if err != nil {
-			return err
-		}
-
-		fe.print("%s\n", cur)
-
-		files := []string{}
-		dirs := []string{}
-
-		_ = filepath.Walk(cur, func(path string, info os.FileInfo, err error) error {
-			if path == cur {
-				return nil // don't print current dir
-			}
-
-			// don't print contents of child directories
-			if filepath.Join(cur, info.Name()) != path {
-				return filepath.SkipDir
-			}
-
-			if info.IsDir() {
-				if os.IsPermission(err) {
-					dirs = append(dirs, fmt.Sprintf("%s (locked)", info.Name()))
-					return filepath.SkipDir
-				}
-
-				if err != nil {
-					return filepath.SkipDir
-				}
-
-				dirs = append(dirs, info.Name())
-			} else {
-				files = append(files, info.Name())
-			}
-			return nil
-		})
-
-		fe.print("Items:\n")
-		for _, file := range files {
-			fe.print("\t%s\n", file)
-		}
-
-		fe.print("Exits:\n")
-		for _, dir := range dirs {
-			fe.print("\t%s\n", dir)
-		}
+		room := currentLocation()
+		room.Display(fe.out)
 
 		if err := fe.promptCommand(); err != nil {
 			return err
